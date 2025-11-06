@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const pythonCode = `# Python program to illustrate Missionaries & Cannibals Problem
+const defaultPythonCode = `# Python program to illustrate Missionaries & Cannibals Problem
 # This code is contributed by Sunit Mal
 
 print("\\n")
@@ -107,156 +107,169 @@ except EOFError as e:
     print("\\nInvalid input please retry !!")
 `;
 
-const cppCode = `// C++ program to illustrate Missionaries & Cannibals Problem
-// Converted from Python implementation
-
-#include <iostream>
+// Default C++ code (A* search) for 3 Missionaries and 3 Cannibals from src/components/3M3C.cpp
+const defaultCppCode = `#include <bits/stdc++.h>
 using namespace std;
 
+struct State {
+  int missionaries_left;
+  int cannibals_left;
+  int boat; // 1 = left, 0 = right
+  int cost;
+
+  // Default constructor
+  State() : missionaries_left(0), cannibals_left(0), boat(0), cost(0) {}
+
+  State(int m, int c, int b, int cost = 0)
+    : missionaries_left(m), cannibals_left(c), boat(b), cost(cost) {}
+
+  // Check if state is valid
+  bool is_valid() const {
+    int m_right = 3 - missionaries_left;
+    int c_right = 3 - cannibals_left;
+
+    if (missionaries_left < 0 || cannibals_left < 0 ||
+      missionaries_left > 3 || cannibals_left > 3) {
+      return false;
+    }
+
+    if (missionaries_left > 0 && missionaries_left < cannibals_left)
+      return false;
+
+    if (m_right > 0 && m_right < c_right)
+      return false;
+
+    return true;
+  }
+
+  // Check if goal reached
+  bool is_goal() const {
+    return missionaries_left == 0 && cannibals_left == 0 && boat == 0;
+  }
+
+  // Heuristic function
+  int heuristic() const {
+    return (missionaries_left + cannibals_left + 1);
+  }
+
+  // Print state
+  void print_state() const {
+    cout << "Left(M=" << missionaries_left << ", C=" << cannibals_left << ") ";
+    if (boat == 1)
+      cout << "<--⛵-- ";
+    else
+      cout << "--⛵--> ";
+  cout << "Right(M=" << 3 - missionaries_left << ", C=" << 3 - cannibals_left << ")\\n";
+  }
+
+  // Equality operator
+  bool operator==(const State &other) const {
+    return missionaries_left == other.missionaries_left &&
+         cannibals_left == other.cannibals_left &&
+         boat == other.boat;
+  }
+};
+
+// Hash function for unordered_set/map
+struct StateHash {
+  size_t operator()(const State &s) const {
+    return hash<int>()(s.missionaries_left * 100 + s.cannibals_left * 10 + s.boat);
+  }
+};
+
+// Priority Queue comparator
+struct Compare {
+  bool operator()(const State &a, const State &b) const {
+    return (a.cost + a.heuristic()) > (b.cost + b.heuristic());
+  }
+};
+
+// Generate successors
+vector<State> get_successors(const State &current) {
+  vector<State> successors;
+  vector<pair<int, int>> moves = {{1, 0}, {2, 0}, {0, 1}, {0, 2}, {1, 1}};
+
+  for (auto [m, c] : moves) {
+    State next(current.missionaries_left, current.cannibals_left, current.boat, current.cost + 1);
+
+    if (current.boat == 1) { // boat on left
+      next.missionaries_left -= m;
+      next.cannibals_left -= c;
+      next.boat = 0;
+    } else { // boat on right
+      next.missionaries_left += m;
+      next.cannibals_left += c;
+      next.boat = 1;
+    }
+
+    if (next.is_valid()) {
+      successors.push_back(next);
+    }
+  }
+
+  return successors;
+}
+
+// A* Search
+void a_star(const State &start) {
+  priority_queue<State, vector<State>, Compare> open_list;
+  unordered_map<State, State, StateHash> came_from;
+  unordered_set<State, StateHash> visited;
+
+  open_list.push(start);
+
+  while (!open_list.empty()) {
+    State current = open_list.top();
+    open_list.pop();
+
+    if (visited.find(current) != visited.end())
+      continue;
+    visited.insert(current);
+
+    if (current.is_goal()) {
+      vector<State> path;
+      State s = current;
+
+      while (came_from.find(s) != came_from.end()) {
+        path.push_back(s);
+        s = came_from[s];
+      }
+      path.push_back(s);
+      reverse(path.begin(), path.end());
+
+  cout << "Solution found using A* Search:\\n";
+      for (auto &state : path)
+        state.print_state();
+      return;
+    }
+
+    for (auto &next_state : get_successors(current)) {
+      if (visited.find(next_state) == visited.end()) {
+        came_from[next_state] = current;
+        open_list.push(next_state);
+      }
+    }
+  }
+
+  cout << "No solution found.\\n";
+}
+
 int main() {
-    int lM = 3;  // lM = Left side Missionaries number
-    int lC = 3;  // lC = Left side Cannibals number
-    int rM = 0;  // rM = Right side Missionaries number
-    int rC = 0;  // rC = Right side cannibals number
-    int userM = 0;  // userM = User input for number of missionaries for right to left side travel
-    int userC = 0;  // userC = User input for number of cannibals for right to left travel
-    int k = 0;
-    int uM, uC;
-
-    cout << "\\n";
-    cout << "\\tGame Start\\nNow the task is to move all of them to right side of the river" << endl;
-    cout << "rules:\\n1. The boat can carry at most two people\\n2. If cannibals num greater than missionaries then the cannibals would eat the missionaries\\n3. The boat cannot cross the river by itself with no people on board" << endl;
-    cout << "\\nM M M C C C |     --- | \\n" << endl;
-
-    try {
-        while(true) {
-            // Left to Right travel
-            while(true) {
-                cout << "Left side -> right side river travel" << endl;
-                cout << "Enter number of Missionaries travel => ";
-                cin >> uM;
-                cout << "Enter number of Cannibals travel => ";
-                cin >> uC;
-
-                if((uM == 0) && (uC == 0)) {
-                    cout << "Empty travel not possible" << endl;
-                    cout << "Re-enter : " << endl;
-                }
-                else if(((uM + uC) <= 2) && ((lM - uM) >= 0) && ((lC - uC) >= 0)) {
-                    break;
-                }
-                else {
-                    cout << "Wrong input re-enter : " << endl;
-                }
-            }
-
-            lM = lM - uM;
-            lC = lC - uC;
-            rM += uM;
-            rC += uC;
-
-            cout << "\\n";
-            for(int i = 0; i < lM; i++) {
-                cout << "M ";
-            }
-            for(int i = 0; i < lC; i++) {
-                cout << "C ";
-            }
-            cout << "| --> | ";
-            for(int i = 0; i < rM; i++) {
-                cout << "M ";
-            }
-            for(int i = 0; i < rC; i++) {
-                cout << "C ";
-            }
-            cout << "\\n" << endl;
-
-            k++;
-
-            // Check lose condition
-            if(((lC == 3) && (lM == 1)) || ((lC == 3) && (lM == 2)) || 
-               ((lC == 2) && (lM == 1)) || ((rC == 3) && (rM == 1)) || 
-               ((rC == 3) && (rM == 2)) || ((rC == 2) && (rM == 1))) {
-                cout << "Cannibals eat missionaries:\\nYou lost the game" << endl;
-                break;
-            }
-
-            // Check win condition
-            if((rM + rC) == 6) {
-                cout << "You won the game : \\n\\tCongrats" << endl;
-                cout << "Total attempt: " << k << endl;
-                break;
-            }
-
-            // Right to Left travel
-            while(true) {
-                cout << "Right side -> Left side river travel" << endl;
-                cout << "Enter number of Missionaries travel => ";
-                cin >> userM;
-                cout << "Enter number of Cannibals travel => ";
-                cin >> userC;
-
-                if((userM == 0) && (userC == 0)) {
-                    cout << "Empty travel not possible" << endl;
-                    cout << "Re-enter : " << endl;
-                }
-                else if(((userM + userC) <= 2) && ((rM - userM) >= 0) && ((rC - userC) >= 0)) {
-                    break;
-                }
-                else {
-                    cout << "Wrong input re-enter : " << endl;
-                }
-            }
-
-            lM += userM;
-            lC += userC;
-            rM -= userM;
-            rC -= userC;
-
-            k++;
-
-            cout << "\\n";
-            for(int i = 0; i < lM; i++) {
-                cout << "M ";
-            }
-            for(int i = 0; i < lC; i++) {
-                cout << "C ";
-            }
-            cout << "| <-- | ";
-            for(int i = 0; i < rM; i++) {
-                cout << "M ";
-            }
-            for(int i = 0; i < rC; i++) {
-                cout << "C ";
-            }
-            cout << "\\n" << endl;
-
-            // Check lose condition after return trip
-            if(((lC == 3) && (lM == 1)) || ((lC == 3) && (lM == 2)) || 
-               ((lC == 2) && (lM == 1)) || ((rC == 3) && (rM == 1)) || 
-               ((rC == 3) && (rM == 2)) || ((rC == 2) && (rM == 1))) {
-                cout << "Cannibals eat missionaries:\\nYou lost the game" << endl;
-                break;
-            }
-        }
-    }
-    catch(...) {
-        cout << "\\nInvalid input please retry !!" << endl;
-    }
-
-    return 0;
+  State start(3, 3, 1);
+  a_star(start);
+  return 0;
 }
 `;
 
-export default function CodeViewer({ isOpen, onClose, pyCode, cppCode, baseName }) {
+export default function CodeViewer({ isOpen, onClose, pyCode, cppCode: cppCodeProp, baseName }) {
   const [selectedLanguage, setSelectedLanguage] = useState('python');
   const [copySuccess, setCopySuccess] = useState('');
 
   if (!isOpen) return null;
 
-  const currentCode = selectedLanguage === 'python' ? (pyCode || pythonCode) : (cppCode || cppCode);
+  const currentCode = selectedLanguage === 'python' ? (pyCode || defaultPythonCode) : (cppCodeProp || defaultCppCode);
   const fileExtension = selectedLanguage === 'python' ? 'py' : 'cpp';
-  const fileName = `${baseName || 'missionaries_cannibals'}.${fileExtension}`;
+  const fileName = `${baseName || (selectedLanguage === 'python' ? 'missionaries_cannibals' : '3m3c_astar')}.${fileExtension}`;
 
   const handleCopy = async () => {
     try {

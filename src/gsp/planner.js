@@ -12,6 +12,7 @@ export class GSPPlanner {
     this.goals = goals;
     this.stack = []; // LIFO
     this.plan = []; // sequence of applied operators
+  this.regressionPlan = []; // operators chosen during backward reasoning (goal regression order)
     this.log = []; // step-by-step log strings and snapshots
     this.current = null; // current item being processed
     this.done = false;
@@ -130,7 +131,7 @@ export class GSPPlanner {
         this.log.push(this.snapshot(`Goal satisfied: ${stringify(g)}`));
         return { done: false };
       }
-      const op = this.achieve(g);
+  const op = this.achieve(g);
       if (!op) {
         // Special handling for HOLDING goal: if arm not empty, push ARMEMPTY as subgoal.
         if (g.type === 'HOLDING') {
@@ -164,9 +165,11 @@ export class GSPPlanner {
         }
         this.log.push(this.snapshot(`No operator to achieve ${stringify(g)} right now`));
         return { done: false };
-      }
-  // Push operator application marker (linking it to the goal), then preconditions as goals
-  this.stack.push({ kind: 'op', op, forGoal: g });
+    }
+    // Record operator in regression order (backward reasoning order)
+    this.regressionPlan.push(op);
+    // Push operator application marker (linking it to the goal), then preconditions as goals
+    this.stack.push({ kind: 'op', op, forGoal: g });
       // push preconditions (substituted already)
       [...op.preconds].reverse().forEach(pc => this.stack.push({ kind: 'goal', goal: pc }));
       this.log.push(this.snapshot(`Decompose goal ${stringify(g)} using ${op.name}${this.formatBindings(op.bindings)}`));

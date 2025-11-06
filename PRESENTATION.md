@@ -1,3 +1,129 @@
+# 📚 AI Learning Platform – Project Report
+
+This report documents an interactive AI Learning Platform built to help students learn classic AI search and constraint satisfaction problems through hands-on, visual experiences. The platform currently includes two modules:
+
+- Missionaries & Cannibals (3M3C) – solved with A* search
+- N-Queens – solved with backtracking and constraint pruning
+
+---
+
+## 🎯 Goals and Motivation
+
+- Make abstract AI algorithms concrete via animation and step-by-step visualization
+- Support multiple learning styles with both auto-run and manual/step modes
+- Encourage experimentation while preventing invalid or unsafe states
+- Provide clean UI feedback: logs, stats, highlights, and code viewer
+
+---
+
+## 🧱 Architecture Overview
+
+- Frontend: React 18 with hooks (stateful algorithm drivers and UI components)
+- Styling: Tailwind CSS (dark theme, responsive, accessible)
+- Animation: Framer Motion (subtle, performant transitions)
+- Dev tooling: Vite (fast HMR), Netlify (deploy-ready via `netlify.toml`)
+
+Key files and modules:
+- `src/pages/MissionariesCannibals.jsx`: A* visualizer with auto/manual play
+- `src/pages/NQueens.jsx`: Backtracking visual solver with pause and step mode
+- `src/astar.js`: A* core logic for 3M3C
+- Reusable UI: `RiverScene`, `StateTable`, `Controls`, `ExplanationLog`, `CodeViewer`
+
+---
+
+## 🧩 Module 1: Missionaries & Cannibals (3M3C)
+
+Problem: Transport 3 missionaries and 3 cannibals across a river with a 2-seat boat without ever allowing cannibals to outnumber missionaries on any bank.
+
+Approach: A* search
+- State: (M_left, C_left, BoatSide), with g/h/f values and parent pointers
+- Heuristic (h): people remaining on left bank (admissible, consistent)
+- Cost (g): number of crossings so far; f = g + h
+- Valid successor generation with safety and capacity constraints
+
+Visualizer features:
+- Open/Closed lists, current node highlighting
+- Boat and character animations for each crossing
+- Auto-run with adjustable speed; manual step mode for exploration
+- Explanation log and end-state modals (success/lose)
+
+Learning outcomes:
+- See informed search frontier expansion
+- Understand heuristic guidance and optimality
+- Contrast between valid/invalid states
+
+---
+
+## ♛ Module 2: N-Queens (Constraint Satisfaction with Backtracking)
+
+Problem: Place N queens on an N×N board so that no two queens attack each other (no shared rows, columns, or diagonals).
+
+Approach: Backtracking with pruning
+- Row-by-row placement; column and diagonal checks per candidate cell
+- Backtrack on dead-ends; count backtracks and show recursion depth
+- Visualization cues: placed queens, ghost queen on trial, single-cell conflict ring
+
+Interaction modes:
+- Automatic mode: adjustable speed (200–2000 ms), pause/resume
+- Step-by-step mode: user advances each decision with “Next Step”
+
+Learning outcomes:
+- Observe trial → place/backtrack loop
+- Understand pruning (early rejection of conflicts)
+- Build intuition for search trees and DFS recursion
+
+---
+
+## 🖥️ UX Design Principles
+
+- Minimal but informative visuals: color-coded highlights, concise logs
+- Dual-pane layout: board on the left, logs on the right, stats below the board
+- Keyboard- and mouse-friendly controls with clear disabled states
+- Consistent iconography (play, pause, step, reset) for quick recognition
+
+---
+
+## 📊 Telemetry & Feedback (Visible in UI)
+
+- Missionaries & Cannibals: Open/Closed sizes, current state, step history, g/h/f
+- N-Queens: Current row, recursion depth, total backtracks, board size
+- Algorithm trace logs with color-coded messages
+
+---
+
+## 🧪 Quality and Performance
+
+- Smooth animations tuned for clarity over flash; delays user-configurable
+- Stateless visual components fed by deterministic algorithm drivers
+- Ref-based guards in async loops to avoid stale state reads (reliable pause/step)
+
+---
+
+## 🚀 How to Run
+
+1. Install dependencies
+2. Start dev server
+3. Open the app in the browser and navigate to modules
+
+Optional deployment: Netlify (included config `netlify.toml`).
+
+---
+
+## 🗺️ Roadmap
+
+- All-solutions mode for N-Queens with pagination
+- Heuristics toggles and visual diffs (e.g., alternative h for 3M3C)
+- Export/share logs as teaching artifacts
+- Accessibility pass (ARIA roles, reduced motion option)
+
+---
+
+## 🎓 Educational Impact
+
+The platform transforms algorithm study from static theory to interactive practice. Students gain intuition about branching, pruning, and optimality by watching—and directly controlling—each move. Step mode, logs, and stats make reasoning explicit and memorable.
+
+---
+
 # 🎓 Missionaries & Cannibals A* Solver - Presentation Guide
 
 ## 📋 Table of Contents

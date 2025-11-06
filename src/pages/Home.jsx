@@ -13,14 +13,32 @@ export default function Home() {
       path: '/missionaries-cannibals',
       features: ['A* Algorithm', 'Heuristic Search', 'Dual Play Modes', 'Real-time Visualization']
     },
+    // {
+    //   id: 'gsp',
+    //   title: 'Goal Stack Planning',
+    //   description: 'Explore AI planning with the Blocks World problem. Watch how the Goal Stack Planner decomposes goals and generates action sequences.',
+    //   icon: '🧱',
+    //   color: 'from-purple-600 to-pink-600',
+    //   path: '/goal-stack-planning',
+    //   features: ['Stack-based Planning', 'Operator Selection', 'World State Updates', 'Step-by-step Execution']
+    // },
+    // {
+    //   id: 'gsp-backward',
+    //   title: 'Goal Stack Planning (Backward)',
+    //   description: 'Pure goal regression: select operators from Goal → Initial without forward world changes during reasoning.',
+    //   icon: '↩️',
+    //   color: 'from-amber-600 to-red-600',
+    //   path: '/goal-stack-planning-backward',
+    //   features: ['Backward Reasoning', 'Regression Operator Order', 'Detailed Logs']
+    // },
     {
-      id: 'gsp',
-      title: 'Goal Stack Planning',
-      description: 'Explore AI planning with the Blocks World problem. Watch how the Goal Stack Planner decomposes goals and generates action sequences.',
-      icon: '🧱',
-      color: 'from-purple-600 to-pink-600',
-      path: '/goal-stack-planning',
-      features: ['Stack-based Planning', 'Operator Selection', 'World State Updates', 'Step-by-step Execution']
+      id: 'nqueens',
+      title: 'N-Queens Visual Solver',
+      description: 'Watch the backtracking algorithm solve the classic N-Queens constraint satisfaction problem step-by-step with conflict highlighting.',
+      icon: '♛',
+      color: 'from-rose-600 to-orange-600',
+      path: '/n-queens',
+      features: ['Backtracking Algorithm', 'Constraint Satisfaction', 'Conflict Detection', 'Multiple Board Sizes']
     }
   ];
 

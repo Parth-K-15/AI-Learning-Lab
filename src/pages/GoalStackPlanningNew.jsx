@@ -23,6 +23,7 @@ export default function GoalStackPlanningNew() {
   const [world, setWorld] = useState([]);
   const [stack, setStack] = useState([]);
   const [plan, setPlan] = useState([]);
+  const [regressionPlan, setRegressionPlan] = useState([]);
   const [current, setCurrent] = useState(null);
   const [lastNote, setLastNote] = useState('');
   const [log, setLog] = useState([]);
@@ -30,6 +31,9 @@ export default function GoalStackPlanningNew() {
   const [speed, setSpeed] = useState(800);
   const [isDone, setIsDone] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const [planningOnly, setPlanningOnly] = useState(false);
+  const [showRegression, setShowRegression] = useState(false);
+  const [initialWorldSnapshot, setInitialWorldSnapshot] = useState([]);
   const timerRef = useRef(null);
 
   function parsePredicates(text) {
@@ -49,9 +53,11 @@ export default function GoalStackPlanningNew() {
   const doStep = () => {
     if (!planner) return;
     const res = planner.step();
-    setWorld([...planner.world]);
+    // When planningOnly is enabled, keep the visualization at initial world until planning completes
+    setWorld(planningOnly ? [...initialWorldSnapshot] : [...planner.world]);
     setStack([...planner.stack]);
-    setPlan([...planner.plan]);
+  setPlan([...planner.plan]);
+  setRegressionPlan([...(planner.regressionPlan || [])]);
     setCurrent(planner.current);
     const last = planner.log[planner.log.length - 1];
     setLastNote(last?.note || '');
@@ -59,6 +65,10 @@ export default function GoalStackPlanningNew() {
     if (res?.done) {
       setIsDone(true);
       setIsRunning(false);
+      // On completion in planning-only mode, jump visualization to final world
+      if (planningOnly) {
+        setWorld([...planner.world]);
+      }
     }
   };
 
@@ -88,9 +98,11 @@ export default function GoalStackPlanningNew() {
     const gl = parsePredicates(goalText);
     const p = new GSPPlanner(ini, gl, blocks);
     setPlanner(p);
-    setWorld([...p.world]);
+    setInitialWorldSnapshot([...ini]);
+    setWorld(planningOnly ? [...ini] : [...p.world]);
     setStack([...p.stack]);
     setPlan([...p.plan]);
+  setRegressionPlan([...(p.regressionPlan || [])]);
     setCurrent(p.current);
     setLastNote('Initialized from user input');
   setLog([...p.log]);
@@ -110,293 +122,324 @@ export default function GoalStackPlanningNew() {
     setIsDone(false);
   };
 
-  const gspPython = `# Goal Stack Planning (Blocks World) - Python console
-from dataclasses import dataclass
-from typing import List, Tuple, Dict
-
-@dataclass(frozen=True)
+  const gspPython = `# Goal Stack Planning - Python console (simple version)
 class Predicate:
-  type: str
-  args: Tuple[str, ...]
+    def __init__(self, name, X="", Y=""):
+        self.name = name
+        self.X = X
+        self.Y = Y
 
-def pred(t: str, *args: str) -> Predicate:
-  return Predicate(t.upper(), tuple(args))
+    def __eq__(self, other):
+        return self.name == other.name and self.X == other.X and self.Y == other.Y
 
-def stringify(p: Predicate) -> str:
-  return f"{p.type}({','.join(p.args)})"
+    def __str__(self):
+        if self.Y:
+            return f"{self.name}({self.X},{self.Y})"
+        elif self.X:
+            return f"{self.name}({self.X})"
+        else:
+            return self.name
 
-def contains(world: List[Predicate], p: Predicate) -> bool:
-  return any(x.type == p.type and x.args == p.args for x in world)
 
-def apply_effects(world: List[Predicate], add: List[Predicate], delete: List[Predicate]) -> List[Predicate]:
-  w = [x for x in world if x not in delete]
-  for a in add:
-    if a not in w:
-      w.append(a)
-  return w
+class Operation:
+    def __init__(self, name, X="", Y=""):
+        self.name = name
+        self.X = X
+        self.Y = Y
 
-@dataclass
-class Op:
-  name: str
-  bindings: Dict[str, str]
-  pre: List[Predicate]
-  add: List[Predicate]
-  delete: List[Predicate]
+    def __str__(self):
+        if self.Y:
+            return f"{self.name}({self.X},{self.Y})"
+        else:
+            return f"{self.name}({self.X})"
 
-def inst_STACK(X, Y):
-  return Op(
-    name='STACK', bindings={'X': X, 'Y': Y},
-    pre=[pred('HOLDING', X), pred('CLEAR', Y)],
-    add=[pred('ON', X, Y), pred('ARMEMPTY'), pred('CLEAR', X)],
-    delete=[pred('HOLDING', X), pred('CLEAR', Y)]
-  )
 
-def inst_UNSTACK(X, Y):
-  return Op(
-    name='UNSTACK', bindings={'X': X, 'Y': Y},
-    pre=[pred('ON', X, Y), pred('CLEAR', X), pred('ARMEMPTY')],
-    add=[pred('HOLDING', X), pred('CLEAR', Y)],
-    delete=[pred('ON', X, Y), pred('CLEAR', X), pred('ARMEMPTY')]
-  )
+def contains(state, p):
+    return any(x == p for x in state)
 
-def inst_PICKUP(X):
-  return Op(
-    name='PICKUP', bindings={'X': X},
-    pre=[pred('ONTABLE', X), pred('CLEAR', X), pred('ARMEMPTY')],
-    add=[pred('HOLDING', X)],
-    delete=[pred('ONTABLE', X), pred('CLEAR', X), pred('ARMEMPTY')]
-  )
 
-def inst_PUTDOWN(X):
-  return Op(
-    name='PUTDOWN', bindings={'X': X},
-    pre=[pred('HOLDING', X)],
-    add=[pred('ONTABLE', X), pred('CLEAR', X), pred('ARMEMPTY')],
-    delete=[pred('HOLDING', X)]
-  )
+def applyOperator(op, world):
+    if op.name == "STACK":
+        world = [w for w in world if w != Predicate("HOLDING", op.X)]
+        world = [w for w in world if w != Predicate("CLEAR", op.Y)]
+        world.append(Predicate("ON", op.X, op.Y))
+        world.append(Predicate("ARMEMPTY"))
+        world.append(Predicate("CLEAR", op.X))
 
-class Planner:
-  def __init__(self, initial: List[Predicate], goals: List[Predicate]):
-    self.initial = list(initial)
-    self.world = list(initial)
-    self.goals = list(goals)
-    self.stack: List[Tuple[str, object]] = [('goal', g) for g in reversed(goals)]
-    self.plan: List[Op] = []
-    self.log: List[str] = []
-    self.current = None
-    self.done = False
-    self.step_count = 0
+    elif op.name == "UNSTACK":
+        world = [w for w in world if w != Predicate("ON", op.X, op.Y)]
+        world = [w for w in world if w != Predicate("ARMEMPTY")]
+        world.append(Predicate("HOLDING", op.X))
+        world.append(Predicate("CLEAR", op.Y))
 
-  def is_sat(self, g: Predicate) -> bool:
-    return contains(self.world, g)
+    elif op.name == "PICKUP":
+        world = [w for w in world if w != Predicate("ONTABLE", op.X)]
+        world = [w for w in world if w != Predicate("ARMEMPTY")]
+        world.append(Predicate("HOLDING", op.X))
 
-  def achieve(self, g: Predicate):
-    t = g.type
-    if t == 'ON':
-      X, Y = g.args
-      return inst_STACK(X, Y)
-    if t == 'CLEAR':
-      X = g.args[0]
-      holder = next((p for p in self.world if p.type == 'ON' and p.args[1] == X), None)
-      if holder:
-        Z = holder.args[0]
-        return inst_UNSTACK(Z, X)
-      return None
-    if t == 'HOLDING':
-      X = g.args[0]
-      if contains(self.world, pred('ONTABLE', X)) and contains(self.world, pred('CLEAR', X)) and contains(self.world, pred('ARMEMPTY')):
-        return inst_PICKUP(X)
-      onx = next((p for p in self.world if p.type == 'ON' and p.args[0] == X), None)
-      if onx and contains(self.world, pred('CLEAR', X)) and contains(self.world, pred('ARMEMPTY')):
-        return inst_UNSTACK(X, onx.args[1])
-      return None
-    if t == 'ARMEMPTY':
-      holding = next((p for p in self.world if p.type == 'HOLDING'), None)
-      if holding:
-        return inst_PUTDOWN(holding.args[0])
-      return None
-    if t == 'ONTABLE':
-      X = g.args[0]
-      holding = next((p for p in self.world if p.type == 'HOLDING' and p.args[0] == X), None)
-      if holding:
-        return inst_PUTDOWN(X)
-      onx = next((p for p in self.world if p.type == 'ON' and p.args[0] == X), None)
-      if onx and contains(self.world, pred('ARMEMPTY')) and contains(self.world, pred('CLEAR', X)):
-        return inst_UNSTACK(X, onx.args[1])
-      return None
-    return None
+    elif op.name == "PUTDOWN":
+        world = [w for w in world if w != Predicate("HOLDING", op.X)]
+        world.append(Predicate("ONTABLE", op.X))
+        world.append(Predicate("CLEAR", op.X))
+        world.append(Predicate("ARMEMPTY"))
 
-  def step(self):
-    if self.done: return {'done': True}
-    if self.step_count > 2000:
-      self.done = True
-      self.log.append('Stopped: step limit reached (possible loop)')
-      return {'done': True}
-    self.step_count += 1
+    return world
 
-    if not self.stack:
-      self.done = True
-      ok = all(self.is_sat(g) for g in self.goals)
-      self.log.append('All goals achieved' if ok else 'Stack empty, some goals unmet')
-      return {'done': True}
 
-    kind, payload = self.stack.pop()
-    self.current = (kind, payload)
+def main():
+    world = [
+        Predicate("ON", "B", "A"),
+        Predicate("ONTABLE", "A"),
+        Predicate("ONTABLE", "C"),
+        Predicate("ONTABLE", "D"),
+        Predicate("CLEAR", "B"),
+        Predicate("CLEAR", "C"),
+        Predicate("CLEAR", "D"),
+        Predicate("ARMEMPTY")
+    ]
 
-    if kind == 'goal':
-      g: Predicate = payload
-      if self.is_sat(g):
-        self.log.append(f"Goal satisfied: {stringify(g)}")
-        return {'done': False}
-      op = self.achieve(g)
-      if not op:
-        if g.type == 'HOLDING':
-          X = g.args[0]
-          if not contains(self.world, pred('ARMEMPTY')):
-            self.stack.append(('goal', pred('ARMEMPTY')))
-            self.log.append(f"Need ARMEMPTY to achieve HOLDING({X}), pushing subgoal ARMEMPTY")
-            return {'done': False}
-          onx = next((p for p in self.world if p.type == 'ON' and p.args[0] == X), None)
-          if onx and not contains(self.world, pred('CLEAR', X)):
-            self.stack.append(('goal', pred('CLEAR', X)))
-            self.log.append(f"Need CLEAR({X}) to unstack, pushing subgoal CLEAR({X})")
-            return {'done': False}
-        if g.type == 'CLEAR':
-          X = g.args[0]
-          occupied = any(p.type == 'ON' and p.args[1] == X for p in self.world)
-          if not occupied and not contains(self.world, pred('CLEAR', X)):
-            self.world.append(pred('CLEAR', X))
-            self.log.append(f"Infer CLEAR({X}) as nothing on it")
-            return {'done': False}
-        self.log.append(f"No operator for {stringify(g)} now")
-        return {'done': False}
-      # push op then preconds
-      self.stack.append(('op', op))
-      for pc in reversed(op.pre):
-        self.stack.append(('goal', pc))
-      self.log.append(f"Decompose {stringify(g)} with {op.name}({','.join(f'{k}={v}' for k,v in op.bindings.items())})")
-      return {'done': False}
+    goal = [
+        Predicate("ON", "C", "A"),
+        Predicate("ON", "B", "D"),
+        Predicate("ONTABLE", "A"),
+        Predicate("ONTABLE", "D"),
+        Predicate("CLEAR", "B"),
+        Predicate("CLEAR", "C"),
+        Predicate("ARMEMPTY")
+    ]
 
-    if kind == 'op':
-      op: Op = payload
-      if not all(self.is_sat(pc) for pc in op.pre):
-        # re-push and missing preconds
-        self.stack.append(('op', op))
-        for pc in op.pre:
-          if not self.is_sat(pc):
-            self.stack.append(('goal', pc))
-        self.log.append(f"Preconditions not met for {op.name}, pushing missing goals")
-        return {'done': False}
-      outstanding = [stringify(g) for k,g in self.stack if k=='goal']
-      remaining = [stringify(g) for g in self.goals if not self.is_sat(g)]
-      helps = any(stringify(a) in outstanding or stringify(a) in remaining for a in op.add)
-      if not helps:
-        self.log.append(f"Skipped redundant operator {op.name}({','.join(f'{k}={v}' for k,v in op.bindings.items())})")
-        return {'done': False}
-      self.world = apply_effects(self.world, op.add, op.delete)
-      self.plan.append(op)
-      self.log.append(f"Applied {op.name}({','.join(f'{k}={v}' for k,v in op.bindings.items())})")
-      return {'done': False}
+    print("Initial State:")
+    print(" ".join(str(p) for p in world))
+    print("\\nGoal State:")
+    print(" ".join(str(p) for p in goal))
+    print()
 
-def default_scenario():
-  initial = [
-    pred('ON','B','A'),
-    pred('ONTABLE','A'),
-    pred('ONTABLE','C'),
-    pred('ONTABLE','D'),
-    pred('CLEAR','B'), pred('CLEAR','C'), pred('CLEAR','D'),
-    pred('ARMEMPTY')
-  ]
-  goals = [
-    pred('ON','C','A'), pred('ON','B','D'),
-    pred('ONTABLE','A'), pred('ONTABLE','D'),
-    pred('CLEAR','B'), pred('CLEAR','C'), pred('ARMEMPTY')
-  ]
-  return initial, goals
+    goalStack = list(reversed(goal))
+    plan = []
 
-if __name__ == '__main__':
-  init, goals = default_scenario()
-  p = Planner(init, goals)
-  while True:
-    r = p.step()
-    if r.get('done'): break
-  print('Plan:')
-  for i,op in enumerate(p.plan,1):
-    b = ','.join(f"{k}={v}" for k,v in op.bindings.items())
-    print(f"{i}. {op.name}({b})")
-  print('\nFinal world:')
-  for w in p.world:
-    print(' -', stringify(w))
+    while goalStack:
+        g = goalStack.pop()
+
+        if contains(world, g):
+            continue
+
+        if g.name == "ON":
+            X, Y = g.X, g.Y
+            goalStack.append(Predicate("HOLDING", X))
+            goalStack.append(Predicate("CLEAR", Y))
+            plan.append(Operation("STACK", X, Y))
+
+        elif g.name == "HOLDING":
+            X = g.X
+            if contains(world, Predicate("ONTABLE", X)):
+                plan.append(Operation("PICKUP", X))
+            else:
+                for p in world:
+                    if p.name == "ON" and p.X == X:
+                        plan.append(Operation("UNSTACK", X, p.Y))
+                        goalStack.append(Predicate("ON", X, p.Y))
+                        break
+
+        elif g.name == "CLEAR":
+            X = g.X
+            for p in world:
+                if p.name == "ON" and p.Y == X:
+                    plan.append(Operation("UNSTACK", p.X, X))
+                    goalStack.append(Predicate("CLEAR", p.X))
+                    break
+
+        elif g.name == "ONTABLE":
+            X = g.X
+            goalStack.append(Predicate("HOLDING", X))
+            plan.append(Operation("PUTDOWN", X))
+
+        elif g.name == "ARMEMPTY":
+            for p in world:
+                if p.name == "HOLDING":
+                    plan.append(Operation("PUTDOWN", p.X))
+                    break
+
+        if plan:
+            last = plan[-1]
+            world = applyOperator(last, world)
+
+    print("\\nPlan (sequence of operations):")
+    for op in plan:
+        print(str(op))
+
+    print("\\nFinal World State:")
+    print(" ".join(str(p) for p in world))
+
+
+if __name__ == "__main__":
+    main()
 `;
 
-  const gspCpp = `// Goal Stack Planning (Blocks World) - C++ console
-#include <bits/stdc++.h>
+  const gspCpp = `// Goal Stack Planning - C++ console (simple version)
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <string>
+#include <algorithm>
 using namespace std;
 
-struct Predicate { string type; vector<string> args; };
-bool operator==(Predicate const& a, Predicate const& b){ return a.type==b.type && a.args==b.args; }
-string stringify(const Predicate& p){ string s=p.type+"("; for(size_t i=0;i<p.args.size();++i){ if(i) s+=","; s+=p.args[i]; } s+=")"; return s; }
-Predicate pred(string t, initializer_list<string> a){ return Predicate{t, vector<string>(a)}; }
+struct Predicate {
+  string name;
+  string X, Y; 
 
-bool contains(vector<Predicate> const& world, Predicate const& p){ return any_of(world.begin(),world.end(),[&](auto& x){return x==p;}); }
-vector<Predicate> apply_effects(vector<Predicate> world, vector<Predicate> add, vector<Predicate> del){
-  vector<Predicate> w; w.reserve(world.size());
-  for(auto &x: world){ if(find(del.begin(),del.end(),x)==del.end()) w.push_back(x); }
-  for(auto &a: add){ if(find(w.begin(),w.end(),a)==w.end()) w.push_back(a); }
-  return w;
-}
+  Predicate(string n, string x = "", string y = "") : name(n), X(x), Y(y) {}
 
-struct Op{ string name; map<string,string> b; vector<Predicate> pre, add, del; };
-
-Op STACK(string X,string Y){ return Op{"STACK", {{"X",X},{"Y",Y}}, { pred("HOLDING",{X}), pred("CLEAR",{Y}) }, { pred("ON",{X,Y}), pred("ARMEMPTY",{}), pred("CLEAR",{X}) }, { pred("HOLDING",{X}), pred("CLEAR",{Y}) } }; }
-Op UNSTACK(string X,string Y){ return Op{"UNSTACK", {{"X",X},{"Y",Y}}, { pred("ON",{X,Y}), pred("CLEAR",{X}), pred("ARMEMPTY",{}) }, { pred("HOLDING",{X}), pred("CLEAR",{Y}) }, { pred("ON",{X,Y}), pred("CLEAR",{X}), pred("ARMEMPTY",{}) } }; }
-Op PICKUP(string X){ return Op{"PICKUP", {{"X",X}}, { pred("ONTABLE",{X}), pred("CLEAR",{X}), pred("ARMEMPTY",{}) }, { pred("HOLDING",{X}) }, { pred("ONTABLE",{X}), pred("CLEAR",{X}), pred("ARMEMPTY",{}) } }; }
-Op PUTDOWN(string X){ return Op{"PUTDOWN", {{"X",X}}, { pred("HOLDING",{X}) }, { pred("ONTABLE",{X}), pred("CLEAR",{X}), pred("ARMEMPTY",{}) }, { pred("HOLDING",{X}) } }; }
-
-struct Item{ string kind; // "goal" or "op"
-  Predicate g; Op op; };
-
-struct Planner{
-  vector<Predicate> initial, world, goals; vector<Item> stack; vector<Op> plan; vector<string> log; int steps=0; bool done=false;
-  Planner(vector<Predicate> init, vector<Predicate> goals): initial(init), world(init), goals(goals){ for(int i=(int)goals.size()-1;i>=0;--i){ stack.push_back({"goal", goals[i], {}}); } }
-  bool is_sat(Predicate const& g){ return contains(world,g); }
-  optional<Op> achieve(Predicate const& g){
-    if(g.type=="ON"){ return STACK(g.args[0], g.args[1]); }
-    if(g.type=="CLEAR"){ string X=g.args[0]; auto it=find_if(world.begin(),world.end(),[&](auto&p){return p.type=="ON" && p.args[1]==X;}); if(it!=world.end()){ string Z=it->args[0]; return UNSTACK(Z,X);} return nullopt; }
-    if(g.type=="HOLDING"){ string X=g.args[0]; if(contains(world,pred("ONTABLE",{X})) && contains(world,pred("CLEAR",{X})) && contains(world,pred("ARMEMPTY",{}))) return PICKUP(X); auto it=find_if(world.begin(),world.end(),[&](auto&p){return p.type=="ON" && p.args[0]==X;}); if(it!=world.end() && contains(world,pred("CLEAR",{X})) && contains(world,pred("ARMEMPTY",{}))) return UNSTACK(X,it->args[1]); return nullopt; }
-    if(g.type=="ARMEMPTY"){ auto it=find_if(world.begin(),world.end(),[](auto&p){return p.type=="HOLDING";}); if(it!=world.end()) return PUTDOWN(it->args[0]); return nullopt; }
-    if(g.type=="ONTABLE"){ string X=g.args[0]; auto h=find_if(world.begin(),world.end(),[&](auto&p){return p.type=="HOLDING" && p.args[0]==X;}); if(h!=world.end()) return PUTDOWN(X); auto on=find_if(world.begin(),world.end(),[&](auto&p){return p.type=="ON" && p.args[0]==X;}); if(on!=world.end() && contains(world,pred("ARMEMPTY",{})) && contains(world,pred("CLEAR",{X}))) return UNSTACK(X,on->args[1]); return nullopt; }
-    return nullopt;
+  string toString() const {
+    if (Y != "") return name + "(" + X + "," + Y + ")";
+    if (X != "") return name + "(" + X + ")";
+    return name;
   }
-  map<string,bool> seen;
-  string signature(){
-    vector<string> w; for(auto &p: world) w.push_back(stringify(p)); sort(w.begin(),w.end());
-    vector<string> s; for(auto &it: stack){ if(it.kind=="goal") s.push_back("G:"+stringify(it.g)); else s.push_back("O:"+it.op.name);} 
-    return accumulate(w.begin(),w.end(),string(""))+"|"+accumulate(s.begin(),s.end(),string(""));
-  }
-  map<string,int> remGoals(){ map<string,int> m; for(auto &g: goals) if(!is_sat(g)) m[stringify(g)]++; return m; }
-  bool step(){
-    if(done) return true; if(steps++>2000){ done=true; log.push_back("Stopped: step limit reached"); return true; }
-    if(stack.empty()){ done=true; bool ok=all_of(goals.begin(),goals.end(),[&](auto&g){return is_sat(g);}); log.push_back(ok?"All goals achieved":"Stack empty, goals unmet"); return true; }
-    auto item = stack.back(); stack.pop_back();
-  if(item.kind=="goal"){ auto g=item.g; if(is_sat(g)){ log.push_back(string("Goal satisfied: ")+stringify(g)); return false; } auto op=achieve(g); if(!op){ if(g.type=="HOLDING"){ string X=g.args[0]; bool armempty = contains(world, pred("ARMEMPTY",{})); if(!armempty){ stack.push_back({"goal", pred("ARMEMPTY",{}), {}}); log.push_back(string("Need ARMEMPTY to achieve HOLDING(")+X+") , pushing subgoal ARMEMPTY"); return false; } auto onx = find_if(world.begin(),world.end(),[&](auto&p){return p.type=="ON" && p.args[0]==X;}); bool clearx = contains(world, pred("CLEAR",{X})); if(onx!=world.end() && !clearx){ stack.push_back({"goal", pred("CLEAR",{X}), {}}); log.push_back(string("Need CLEAR(")+X+") to unstack, pushing subgoal CLEAR("+X+")"); return false; } } if(g.type=="CLEAR"){ string X=g.args[0]; bool occ=any_of(world.begin(),world.end(),[&](auto&p){return p.type=="ON" && p.args[1]==X;}); if(!occ && !contains(world,pred("CLEAR",{X}))){ world.push_back(pred("CLEAR",{X})); log.push_back(string("Infer CLEAR(")+X+")"); } return false; } log.push_back(string("No operator for ")+stringify(g)); return false; } stack.push_back({"op", {}, *op}); for(int i=(int)op->pre.size()-1;i>=0;--i) stack.push_back({"goal", op->pre[i], {}}); log.push_back(string("Decompose ")+stringify(g)+" with "+op->name); return false; }
-    // op
-    auto op=item.op; bool ok=all_of(op.pre.begin(),op.pre.end(),[&](auto&pc){return is_sat(pc);}); if(!ok){ stack.push_back({"op", {}, op}); for(auto &pc: op.pre) if(!is_sat(pc)) stack.push_back({"goal", pc, {}}); log.push_back(string("Preconditions not met for ")+op.name); return false; }
-    vector<string> outstanding; for(auto &it: stack) if(it.kind=="goal") outstanding.push_back(stringify(it.g));
-    vector<string> remaining; for(auto &g: goals) if(!is_sat(g)) remaining.push_back(stringify(g));
-    bool helps=false; for(auto &a: op.add){ string sa=stringify(a); if(find(outstanding.begin(),outstanding.end(),sa)!=outstanding.end() || find(remaining.begin(),remaining.end(),sa)!=remaining.end()) { helps=true; break; } }
-    if(!helps){ log.push_back(string("Skipped redundant operator ")+op.name); return false; }
-    world = apply_effects(world, op.add, op.del); plan.push_back(op); log.push_back(string("Applied ")+op.name); return false;
+
+  bool operator==(const Predicate &other) const {
+    return name == other.name && X == other.X && Y == other.Y;
   }
 };
 
-int main(){
-  vector<Predicate> init = { pred("ON",{"B","A"}), pred("ONTABLE",{"A"}), pred("ONTABLE",{"C"}), pred("ONTABLE",{"D"}), pred("CLEAR",{"B"}), pred("CLEAR",{"C"}), pred("CLEAR",{"D"}), pred("ARMEMPTY",{}) };
-  vector<Predicate> goals = { pred("ON",{"C","A"}), pred("ON",{"B","D"}), pred("ONTABLE",{"A"}), pred("ONTABLE",{"D"}), pred("CLEAR",{"B"}), pred("CLEAR",{"C"}), pred("ARMEMPTY",{}) };
-  Planner p(init, goals);
-  while(true){ if(p.step()) break; }
-  cout << "Plan:\n"; int i=1; for(auto &op: p.plan){ cout << i++ << ". " << op.name << "("; bool first=true; for(auto &kv: op.b){ if(!first) cout << ","; first=false; cout << kv.first << "=" << kv.second; } cout << ")\n"; }
-  cout << "\nFinal world:\n"; for(auto &w: p.world){ cout << " - " << stringify(w) << "\n"; }
+struct Operation {
+  string name;
+  string X, Y;
+
+  Operation(string n, string x = "", string y = "") : name(n), X(x), Y(y) {}
+
+  string toString() const {
+    if (Y != "") return name + "(" + X + "," + Y + ")";
+    return name + "(" + X + ")";
+  }
+};
+
+bool contains(const vector<Predicate> &state, const Predicate &p) {
+  return find(state.begin(), state.end(), p) != state.end();
+}
+
+void applyOperator(Operation op, vector<Predicate> &world) {
+  if (op.name == "STACK") {
+    world.erase(remove(world.begin(), world.end(), Predicate("HOLDING", op.X)), world.end());
+    world.erase(remove(world.begin(), world.end(), Predicate("CLEAR", op.Y)), world.end());
+    world.push_back(Predicate("ON", op.X, op.Y));
+    world.push_back(Predicate("ARMEMPTY"));
+    world.push_back(Predicate("CLEAR", op.X));
+  }
+  else if (op.name == "UNSTACK") {
+    world.erase(remove(world.begin(), world.end(), Predicate("ON", op.X, op.Y)), world.end());
+    world.erase(remove(world.begin(), world.end(), Predicate("ARMEMPTY")), world.end());
+    world.push_back(Predicate("HOLDING", op.X));
+    world.push_back(Predicate("CLEAR", op.Y));
+  }
+  else if (op.name == "PICKUP") {
+    world.erase(remove(world.begin(), world.end(), Predicate("ONTABLE", op.X)), world.end());
+    world.erase(remove(world.begin(), world.end(), Predicate("ARMEMPTY")), world.end());
+    world.push_back(Predicate("HOLDING", op.X));
+  }
+  else if (op.name == "PUTDOWN") {
+    world.erase(remove(world.begin(), world.end(), Predicate("HOLDING", op.X)), world.end());
+    world.push_back(Predicate("ONTABLE", op.X));
+    world.push_back(Predicate("CLEAR", op.X));
+    world.push_back(Predicate("ARMEMPTY"));
+  }
+}
+
+int main() {
+  vector<Predicate> world = {
+    Predicate("ON", "B", "A"),
+    Predicate("ONTABLE", "A"),
+    Predicate("ONTABLE", "C"),
+    Predicate("ONTABLE", "D"),
+    Predicate("CLEAR", "B"),
+    Predicate("CLEAR", "C"),
+    Predicate("CLEAR", "D"),
+    Predicate("ARMEMPTY")
+  };
+
+  vector<Predicate> goal = {
+    Predicate("ON", "C", "A"),
+    Predicate("ON", "B", "D"),
+    Predicate("ONTABLE", "A"),
+    Predicate("ONTABLE", "D"),
+    Predicate("CLEAR", "B"),
+    Predicate("CLEAR", "C"),
+    Predicate("ARMEMPTY")
+  };
+
+  cout << "Initial State:\\n";
+  for (auto &p : world) cout << p.toString() << " ";
+  cout << "\\n\\nGoal State:\\n";
+  for (auto &p : goal) cout << p.toString() << " ";
+  cout << "\\n\\n";
+
+  stack<Predicate> goalStack;
+  for (auto &g : goal) goalStack.push(g);
+
+  vector<Operation> plan;
+
+  while (!goalStack.empty()) {
+    Predicate g = goalStack.top();
+    goalStack.pop();
+
+    if (contains(world, g)) continue; 
+        
+    if (g.name == "ON") {
+      string X = g.X, Y = g.Y;
+      goalStack.push(Predicate("HOLDING", X));
+      goalStack.push(Predicate("CLEAR", Y));
+      plan.push_back(Operation("STACK", X, Y));
+    }
+    else if (g.name == "HOLDING") {
+      string X = g.X;
+      if (contains(world, Predicate("ONTABLE", X)))
+        plan.push_back(Operation("PICKUP", X));
+      else {
+        for (auto &p : world) {
+          if (p.name == "ON" && p.X == X) {
+            plan.push_back(Operation("UNSTACK", X, p.Y));
+            goalStack.push(Predicate("ON", X, p.Y));
+            break;
+          }
+        }
+      }
+    }
+    else if (g.name == "CLEAR") {
+      string X = g.X;
+      for (auto &p : world) {
+        if (p.name == "ON" && p.Y == X) {
+          plan.push_back(Operation("UNSTACK", p.X, X));
+          goalStack.push(Predicate("CLEAR", p.X));
+          break;
+        }
+      }
+    }
+    else if (g.name == "ONTABLE") {
+      string X = g.X;
+      goalStack.push(Predicate("HOLDING", X));
+      plan.push_back(Operation("PUTDOWN", X));
+    }
+    else if (g.name == "ARMEMPTY") {
+      for (auto &p : world) {
+        if (p.name == "HOLDING") {
+          plan.push_back(Operation("PUTDOWN", p.X));
+          break;
+        }
+      }
+    }
+
+    if (!plan.empty()) {
+      Operation last = plan.back();
+      applyOperator(last, world);
+    }
+  }
+
+  cout << "\\nPlan (sequence of operations):\\n";
+  for (auto &op : plan) cout << op.toString() << "\\n";
+
+  cout << "\\nFinal World State:\\n";
+  for (auto &p : world) cout << p.toString() << " ";
+  cout << "\\n";
+
+  return 0;
 }
 `;
 
@@ -445,7 +488,7 @@ int main(){
               />
             </div>
             <div>
-              <label className="text-sm text-gray-300 font-semibold">Goal State (one predicate per line)</label>
+              <label className="text-sm text-gray-300 font-semibold">Final State (one predicate per line)</label>
               <textarea
                 value={goalText}
                 onChange={(e) => setGoalText(e.target.value)}
@@ -465,6 +508,17 @@ int main(){
             <button onClick={() => setShowCode(true)} className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 ml-auto transition-colors">
               💻 View Code
             </button>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" className="w-4 h-4" checked={planningOnly} onChange={(e) => setPlanningOnly(e.target.checked)} />
+              Plan-first (no world updates during reasoning)
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" className="w-4 h-4" checked={showRegression} onChange={(e) => setShowRegression(e.target.checked)} />
+              Show backward (regression) operator order
+            </label>
+            <span className="text-xs text-gray-400">GSP reasons backward from goals; world changes are the forward execution of chosen actions.</span>
           </div>
           <div className="mt-4 text-right">
             <span className="text-sm text-gray-400">
@@ -489,14 +543,14 @@ int main(){
             </div>
 
             {/* Plan Summary */}
-            {plan.length > 0 && (
+            {(showRegression ? regressionPlan.length > 0 : plan.length > 0) && (
               <div className="bg-slate-800 rounded-lg shadow-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-bold mb-3 text-gray-200">📋 Generated Plan</h3>
+                <h3 className="text-lg font-bold mb-3 text-gray-200">📋 {showRegression ? 'Backward (Goal Regression) Operator Sequence' : 'Forward Execution Plan'}</h3>
                 <ol className="list-decimal list-inside space-y-2">
-                  {plan.map((op, i) => (
+                  {(showRegression ? regressionPlan : plan).map((op, i) => (
                     <li key={i} className="text-sm text-gray-300 font-mono">
                       <span className="text-cyan-300 font-semibold">{op.name}</span>
-                      <span className="text-gray-400">({Object.entries(op.bindings).map(([k, v]) => `${k}=${v}`).join(', ')})</span>
+                      <span className="text-gray-400">({Object.entries(op.bindings || {}).map(([k, v]) => `${k}=${v}`).join(', ')})</span>
                     </li>
                   ))}
                 </ol>
