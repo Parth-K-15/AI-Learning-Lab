@@ -1,68 +1,136 @@
 import React from 'react';
-import { stringify } from '../../gsp/predicate';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const COLORS = {
-  A: 'bg-rose-500',
-  B: 'bg-emerald-500',
-  C: 'bg-amber-500',
-  D: 'bg-indigo-500',
-};
+export default function BlocksWorld({ state, blocks, holdingBlock }) {
+  // Parse state to determine block positions
+  const getBlockPositions = () => {
+    const positions = {};
+    const onTable = [];
+    const stacks = {};
 
-function deriveStacks(world, blocks) {
-  // Build mapping child->parent for ON
-  const onMap = new Map(); // X -> Y
-  const onTable = new Set();
-  const clear = new Set();
-  world.forEach(p => {
-    if (p.type === 'ON') onMap.set(p.args[0], p.args[1]);
-    if (p.type === 'ONTABLE') onTable.add(p.args[0]);
-    if (p.type === 'CLEAR') clear.add(p.args[0]);
-  });
+    // Find blocks on table
+    blocks.forEach(block => {
+      const ontable = state.find(p => 
+        p.name === 'ONTABLE' && p.x === block
+      );
+      if (ontable) {
+        onTable.push(block);
+        positions[block] = { on: 'table', column: null };
+      }
+    });
 
-  // Build stacks from ONTABLE bases
-  const bases = blocks.filter(b => onTable.has(b));
-  const stacks = bases.map(base => {
-    const stack = [base];
-    let current = base;
-    // Find who is on current iteratively
-    while (true) {
-      const next = [...onMap.entries()].find(([, y]) => y === current);
-      if (!next) break;
-      const x = next[0];
-      stack.push(x);
-      current = x;
-    }
-    return stack;
-  });
+    // Find blocks stacked on others
+    blocks.forEach(block => {
+      const onPred = state.find(p => 
+        p.name === 'ON' && p.x === block
+      );
+      if (onPred) {
+        positions[block] = { on: onPred.y, column: null };
+      }
+    });
 
-  // Blocks not on table might be held or missing; ensure all blocks appear
-  blocks.forEach(b => {
-    if (!stacks.some(s => s.includes(b))) stacks.push([b]);
-  });
+    // Build stacks from bottom up
+    const buildStack = (base) => {
+      const stack = [base];
+      let current = base;
+      while (true) {
+        const above = blocks.find(b => positions[b]?.on === current);
+        if (!above) break;
+        stack.push(above);
+        current = above;
+      }
+      return stack;
+    };
 
-  return { stacks, clear, onTable };
-}
+    // Assign columns
+    onTable.forEach((base, idx) => {
+      const stack = buildStack(base);
+      stack.forEach((block, height) => {
+        positions[block].column = idx;
+        positions[block].height = height;
+      });
+    });
 
-export default function BlocksWorld({ world, blocks = ['A','B','C','D'] }) {
-  const { stacks } = deriveStacks(world, blocks);
+    return positions;
+  };
+
+  const positions = getBlockPositions();
+  const blockColors = {
+    A: 'from-red-500 to-red-600',
+    B: 'from-blue-500 to-blue-600',
+    C: 'from-green-500 to-green-600',
+    D: 'from-yellow-500 to-yellow-600'
+  };
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-      <h3 className="text-xl font-bold text-gray-200 mb-4">🏗️ Blocks World</h3>
-      <div className="relative h-64 w-full bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
-        {/* Table */}
-        <div className="absolute bottom-4 left-4 right-4 h-4 bg-slate-600 rounded"></div>
-        {/* Stacks */}
-        <div className="absolute bottom-8 left-6 right-6 flex justify-around items-end h-[calc(100%-3rem)]">
-          {stacks.map((stack, i) => (
-            <div key={i} className="flex flex-col-reverse items-center gap-2 min-w-[120px]">
-              {stack.map((b, j) => (
-                <div key={j} className={`w-28 h-10 ${COLORS[b] || 'bg-slate-500'} rounded shadow-lg border-2 border-white/20 flex items-center justify-center text-white font-bold`}>
-                  {b}
-                </div>
-              ))}
+    <div className="relative w-full h-96 bg-slate-900 rounded-lg border-2 border-slate-700 overflow-hidden">
+      {/* Table surface */}
+      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-amber-800 to-amber-700 border-t-2 border-amber-600" />
+
+      {/* Arm/Gripper area */}
+      {holdingBlock && (
+        <motion.div
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 20, opacity: 1 }}
+          className="absolute left-1/2 transform -translate-x-1/2 z-50"
+        >
+          <div className="flex flex-col items-center">
+            <div className="w-1 h-16 bg-slate-400" />
+            <div className="w-12 h-2 bg-slate-500 rounded-full" />
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 1 }}
+              className={`w-16 h-16 rounded-lg bg-gradient-to-br ${blockColors[holdingBlock]} 
+                shadow-2xl flex items-center justify-center text-white font-bold text-2xl border-2 border-white`}
+            >
+              {holdingBlock}
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Blocks on table/stacked */}
+      <div className="absolute bottom-4 left-0 right-0 flex justify-around px-8">
+        {blocks.filter(b => positions[b]?.on === 'table').map((baseBlock, colIdx) => {
+          // Get full stack for this column
+          const stack = [];
+          let current = baseBlock;
+          while (current) {
+            stack.push(current);
+            current = blocks.find(b => positions[b]?.on === current);
+          }
+
+          return (
+            <div key={colIdx} className="flex flex-col-reverse items-center gap-1">
+              <AnimatePresence>
+                {stack.map((block, heightIdx) => (
+                  <motion.div
+                    key={block}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className={`w-20 h-20 rounded-lg bg-gradient-to-br ${blockColors[block]} 
+                      shadow-xl flex items-center justify-center text-white font-bold text-3xl 
+                      border-2 border-white hover:scale-105 transition-transform`}
+                  >
+                    {block}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* Status indicator */}
+      <div className="absolute top-4 right-4 text-gray-400 text-sm">
+        <div className="bg-slate-800/80 px-3 py-2 rounded-lg border border-slate-600">
+          {holdingBlock ? (
+            <span className="text-cyan-400">🤖 Holding: {holdingBlock}</span>
+          ) : (
+            <span className="text-green-400">🤖 Arm Empty</span>
+          )}
         </div>
       </div>
     </div>

@@ -1,57 +1,52 @@
-// Basic predicate utilities for Blocks World
-// A predicate is { type: string, args: string[] }
-
-export function pred(type, ...args) {
-  return { type, args };
-}
-
-export function isVariable(sym) {
-  // Variables are symbols like X, Y, Z (single or multiple uppercase letters not in known block set)
-  // We'll treat names starting with '?' or lowercase 'var_' as variables as well
-  return typeof sym === 'string' && (/^[A-Z]+$/.test(sym) && !['A','B','C','D','TABLE'].includes(sym) || sym.startsWith('?') || sym.startsWith('var_'));
-}
-
-export function equals(a, b) {
-  return a.type === b.type && a.args.length === b.args.length && a.args.every((v, i) => v === b.args[i]);
-}
-
-export function stringify(p) {
-  return `${p.type}(${p.args.join(', ')})`;
-}
-
-export function containsPredicate(world, p) {
-  return world.some(w => equals(w, p));
-}
-
-export function substitute(p, bindings) {
-  return {
-    type: p.type,
-    args: p.args.map(arg => (bindings[arg] ? bindings[arg] : arg)),
-  };
-}
-
-export function unify(pattern, fact, bindings = {}) {
-  if (pattern.type !== fact.type || pattern.args.length !== fact.args.length) return null;
-  const out = { ...bindings };
-  for (let i = 0; i < pattern.args.length; i++) {
-    const pat = pattern.args[i];
-    const val = fact.args[i];
-    if (isVariable(pat)) {
-      if (out[pat] && out[pat] !== val) return null; // conflict
-      out[pat] = val;
-    } else {
-      if (pat !== val) return null;
-    }
+// Predicate class for representing world state facts
+export class Predicate {
+  constructor(name, x = null, y = null) {
+    this.name = name;
+    this.x = x;
+    this.y = y;
   }
-  return out;
+
+  toString() {
+    if (this.x === null && this.y === null) {
+      return this.name;
+    }
+    if (this.y === null) {
+      return `${this.name}(${this.x})`;
+    }
+    return `${this.name}(${this.x},${this.y})`;
+  }
+
+  equals(other) {
+    return (
+      other instanceof Predicate &&
+      this.name === other.name &&
+      this.x === other.x &&
+      this.y === other.y
+    );
+  }
+
+  // Helper to check if this predicate exists in a state
+  static isInState(predicate, state) {
+    return state.some(p => predicate.equals(p));
+  }
+
+  // Helper to remove a predicate from state
+  static removeFromState(predicate, state) {
+    return state.filter(p => !predicate.equals(p));
+  }
+
+  // Helper to add predicate to state if not exists
+  static addToState(predicate, state) {
+    if (!Predicate.isInState(predicate, state)) {
+      return [...state, predicate];
+    }
+    return state;
+  }
 }
 
-export function applyEffects(world, addList, delList) {
-  // Remove del effects
-  const next = world.filter(w => !delList.some(d => equals(d, w)));
-  // Add add effects if not present
-  addList.forEach(a => {
-    if (!next.some(w => equals(w, a))) next.push(a);
-  });
-  return next;
-}
+// Factory functions for common predicates
+export const ON = (x, y) => new Predicate('ON', x, y);
+export const ONTABLE = (x) => new Predicate('ONTABLE', x);
+export const CLEAR = (x) => new Predicate('CLEAR', x);
+export const HOLDING = (x) => new Predicate('HOLDING', x);
+export const ARMEMPTY = () => new Predicate('ARMEMPTY');

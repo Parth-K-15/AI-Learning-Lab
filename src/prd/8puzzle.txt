@@ -1,0 +1,149 @@
+🧩 Project Title:
+8-Puzzle Problem Visual Solver Using A* Algorithm
+
+(With Heuristic Search + Open/Closed List Visualization)
+
+🎯 Project Objective
+
+To implement an interactive web-based visual solver for the 8-puzzle problem, using the A* search algorithm, where users can:
+✔ Enter any initial configuration (or auto-generate one)
+✔ Watch the algorithm solve step-by-step
+✔ See Open List, Closed List, Heuristic Values live
+✔ Understand why A* gives the optimal solution
+
+🧠 Core Concepts Demonstrated
+Concept	Syllabus Topic Covered
+A* Algorithm	Heuristic Search
+h(n), g(n), f(n)	Cost + Heuristic function
+Manhattan Distance	Admissible heuristic
+Misplaced Tile Count	Non-optimally heuristic
+Priority Queue	Optimal node selection
+State Space Search	AI Problem Solving
+🧩 Problem Definition
+
+We have a 3×3 grid containing tiles numbered 1 to 8 and one empty space (_).
+Goal: Rearrange the tiles to reach the goal configuration, using valid moves (Up, Down, Left, Right).
+
+🟢 Goal State (Default)
+1 2 3
+4 5 6
+7 8 _
+
+🔴 Input Example
+1 2 3
+5 _ 6
+4 7 8
+
+⚙️ Algorithm Used – A*
+f(n) = g(n) + h(n)
+g(n) → cost so far (moves taken)
+h(n) → estimated cost to goal
+
+Supported Heuristics:
+Heuristic	Description	Optimal?
+Misplaced Tiles	Count of tiles in wrong position	❌ No
+Manhattan Distance	Sum of distances from goal positions	✅ Yes
+🔍 Data Structure Design
+
+Each node/state will store:
+
+{
+  "board": [[1,2,3],[4,5,6],[7,8,0]],
+  "g": 5,
+  "h": 3,
+  "f": 8,
+  "parent": <pointer to previous state>
+}
+
+🧭 Algorithm Workflow (A for 8 Puzzle)*
+A*(start, goal):
+    open_list = priority queue
+    closed_list = empty list
+
+    push start to open_list
+
+    while open_list not empty:
+        current = node with lowest f(n)
+        if current == goal:
+            return reconstruct_path(current)
+
+        move current to closed_list
+
+        for each neighbor of current:
+            if neighbor in closed_list → continue
+            compute g, h, f
+            if neighbor not in open_list OR better f found:
+                update parent, g, h, f
+                add to open_list
+
+🧪 Valid Moves (Swap Blank Tile)
+Move	Condition
+UP	blank not in row 0
+DOWN	blank not in row 2
+LEFT	blank not in column 0
+RIGHT	blank not in column 2
+🎨 UI / VISUALIZATION PLAN
+🖼️ Main Puzzle View (3×3 Grid)
+
+Tiles animate sliding into blank space
+
+Wrong tiles highlighted 🔴
+
+Correct positions 🟢
+
+📊 Open List Table
+State | g | h | f
+1 2 3   | 2 | 4 | 6
+5 _ 6   | 3 | 3 | 6
+
+🧠 Heuristic Panel
+Heuristic Chosen: Manhattan Distance
+g = 4 moves done
+h = 3 tiles away from goal
+f = g + h = 7
+
+🧭 Move Display
+Next Move: Slide 8 LEFT
+Path So Far: LEFT → DOWN → RIGHT
+
+🎛️ User Controls
+Button	Function
+Start	Begin solving the puzzle
+Next Step	Show next move of A*
+Auto Solve	Run full solution with animation
+Reset	Clear and enter new puzzle
+Random Puzzle	Auto-generate solvable puzzle
+Change Heuristic	Compare Misplaced vs Manhattan
+📌 Tech Stack
+Layer	Technology
+Frontend	React.js
+UI/Styles	Tailwind CSS
+Animation	Framer Motion
+Logic	JavaScript (Priority Queue + A*)
+Hosting	Netlify
+📈 Final Output (Example)
+Initial:
+1 2 3
+5 _ 6
+4 7 8
+
+Goal Achieved in 6 Moves:
+UP → LEFT → DOWN → RIGHT → UP → LEFT
+
+Nodes explored: 31
+Time taken: 1.2 seconds
+
+
+🟢 Puzzle solved visually
+📊 Heuristic values explained
+📉 Optimality proved
+
+🧠 Extra Features (Optional)
+
+Compare both heuristics visually
+
+Show state-space search tree
+
+Load puzzle from image (future ML idea)
+
+Download solution path as PDF

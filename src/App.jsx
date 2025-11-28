@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import MissionariesCannibals from './pages/MissionariesCannibals';
-import GoalStackPlanning from './pages/GoalStackPlanningNew';
-import GoalStackPlanningBackward from './pages/GoalStackPlanningBackward';
 import NQueens from './pages/NQueens';
+import GoalStackPlanning from './pages/GoalStackPlanning';
+import EightPuzzle from './pages/EightPuzzle';
 
 function App() {
   return (
@@ -12,9 +12,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/missionaries-cannibals" element={<MissionariesCannibals />} />
-        <Route path="/goal-stack-planning" element={<GoalStackPlanning />} />
-        <Route path="/goal-stack-planning-backward" element={<GoalStackPlanningBackward />} />
         <Route path="/n-queens" element={<NQueens />} />
+        <Route path="/goal-stack-planning" element={<GoalStackPlanning />} />
+        <Route path="/8-puzzle" element={<EightPuzzle />} />
       </Routes>
     </Router>
   );

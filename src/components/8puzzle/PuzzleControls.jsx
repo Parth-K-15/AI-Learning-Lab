@@ -1,15 +1,16 @@
 import React from 'react';
 
-export default function GSPControls({
+export default function PuzzleControls({
   onNextStep,
   onAutoRun,
   onReset,
+  onFindSolution,
   isRunning,
   isComplete,
+  isSolving,
   animationSpeed,
   onSpeedChange,
-  onViewCode,
-  onShowActionsTable
+  onViewCode
 }) {
   return (
     <div className="bg-slate-800 rounded-lg shadow-xl p-6 border border-slate-700">
@@ -31,34 +32,47 @@ export default function GSPControls({
         <button
           onClick={onAutoRun}
           disabled={isComplete}
-          className={`px-6 py-3 rounded-lg font-semibold transition-colors
-            disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2
+          className={`px-6 py-3 text-white rounded-lg font-semibold transition-colors 
+            flex items-center justify-center gap-2
             ${isRunning 
-              ? 'bg-red-600 hover:bg-red-700 text-white' 
-              : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
+              ? 'bg-orange-600 hover:bg-orange-700' 
+              : 'bg-green-600 hover:bg-green-700'
+            }
+            disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {isRunning ? (
+          <span>{isRunning ? '⏸️' : '▶️'}</span>
+          {isRunning ? 'Pause' : 'Auto Solve'}
+        </button>
+
+        {/* Find Solution Button */}
+        <button
+          onClick={onFindSolution}
+          disabled={isRunning || isComplete || isSolving}
+          className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold 
+            hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+            flex items-center justify-center gap-2"
+        >
+          {isSolving ? (
             <>
-              <span>⏸️</span> Pause
+              <span className="animate-spin">⏳</span> Solving...
             </>
           ) : (
             <>
-              <span>▶️</span> Auto Run
+              <span>🎯</span> Find Solution
             </>
           )}
         </button>
 
-        {/* Reset */}
+        {/* Reset Button */}
         <button
           onClick={onReset}
-          className="px-6 py-3 bg-gray-700 text-white rounded-lg font-semibold 
-            hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+          className="px-6 py-3 bg-gray-600 text-white rounded-lg font-semibold 
+            hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
         >
-          <span>�</span> Reset
+          <span>🔄</span> Reset
         </button>
 
-        {/* View Code */}
+        {/* View Code Button */}
         <button
           onClick={onViewCode}
           className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold 
@@ -67,30 +81,19 @@ export default function GSPControls({
           <span>📝</span> View Code
         </button>
 
-        {/* Actions Table */}
-        {onShowActionsTable && (
-          <button
-            onClick={onShowActionsTable}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold 
-              hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <span>📊</span> Actions Table
-          </button>
-        )}
-
         {/* Status */}
         {isComplete && (
           <div className="px-4 py-2 bg-green-900/30 border border-green-600 rounded-lg text-center flex items-center justify-center gap-2">
             <span>✅</span>
-            <span className="text-green-400 font-bold">Planning Complete!</span>
+            <span className="text-green-400 font-bold">Puzzle Solved!</span>
           </div>
         )}
       </div>
 
-      {/* Speed Control - Below buttons */}
+      {/* Speed Slider */}
       <div className="mt-4 pt-4 border-t border-slate-700">
         <label className="block text-sm font-semibold text-gray-300 mb-2">
-          Animation Speed: <span className="text-cyan-400">{animationSpeed}ms</span>
+          Animation Speed: {animationSpeed}ms
         </label>
         <input
           type="range"
@@ -99,8 +102,7 @@ export default function GSPControls({
           step="100"
           value={animationSpeed}
           onChange={(e) => onSpeedChange(Number(e.target.value))}
-          disabled={isRunning}
-          className="w-full"
+          className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>Fast (100ms)</span>

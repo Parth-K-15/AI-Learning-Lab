@@ -1,0 +1,284 @@
+🧠 Product Requirements Document (PRD)
+🎯 Project Title
+
+Goal Stack Planning Visual Visualizer (Blocks World Simulator)
+
+1️⃣ Overview
+Objective:
+
+To build an interactive, educational web app that visualizes the Goal Stack Planning (GSP) algorithm for the Blocks World problem, showing how AI generates and executes a plan to transform an initial world state into a goal state.
+
+The visualizer demonstrates AI problem-solving through:
+
+Stack-based reasoning
+
+Recursive subgoals
+
+Operator (action) selection and application
+
+Real-time world state updates
+
+This helps students understand how Goal Stack Planning works internally, beyond abstract pseudocode.
+
+2️⃣ Concept — “How Goal Stack Planning Works”
+
+The Goal Stack Planner is a non-linear planning algorithm.
+It works backward from the goal state, decomposing each goal into subgoals and required actions.
+
+At runtime:
+
+Push goals to a stack.
+
+Pop the top goal.
+
+If it’s already satisfied in the world → skip.
+
+If not, find an operator (action) that can achieve it.
+
+Push subgoals of that operator onto the stack.
+
+Apply operators when their preconditions are met.
+
+Continue until the goal stack is empty.
+
+The simulator shows this process step by step, updating both:
+
+🧩 The Goal Stack
+
+🏗️ The World State
+
+3️⃣ Key Features
+🧱 1. Blocks World Visualization
+
+Each block (A, B, C, D) is displayed as a draggable colored tile.
+
+Blocks can be stacked on each other or placed on the table.
+
+The current world state (set of predicates like ON(B, A), CLEAR(C), etc.) is reflected visually.
+
+Initial Example:
+
+ON(B, A)
+ONTABLE(A)
+ONTABLE(C)
+ONTABLE(D)
+CLEAR(B), CLEAR(C), CLEAR(D), ARMEMPTY
+
+
+Goal Example:
+
+ON(C, A)
+ON(B, D)
+ONTABLE(A)
+ONTABLE(D)
+CLEAR(B), CLEAR(C), ARMEMPTY
+
+🧠 2. Goal Stack Panel
+
+A dynamic stack panel shows the contents of the goal stack in real-time.
+
+When the system processes goals:
+
+Push goals (slide-in animation).
+
+Pop goals (fade-out).
+
+Each goal color-coded:
+
+🟨 Current goal
+
+🟩 Achieved goal
+
+🟥 Pending goal
+
+Example Stack:
+
+Top
+│
+├── HOLDING(C)
+├── CLEAR(A)
+└── ON(C, A)
+Bottom
+
+🧩 3. Action Panel
+
+Shows the operator (action) being executed:
+
+Applying: STACK(C, A)
+
+
+Each operation updates the visual world:
+
+PICKUP(X) → block lifts off the table
+
+STACK(X, Y) → block moves over Y and settles
+
+UNSTACK(X, Y) → block separates
+
+PUTDOWN(X) → block placed back on table
+
+📜 4. World State Panel
+
+Displays the current set of predicates dynamically:
+
+{ ON(B, A), ONTABLE(A), CLEAR(B), CLEAR(C), ARMEMPTY }
+
+
+After every action, this list updates to reflect the latest world state (postconditions applied).
+
+🔍 5. Algorithm Insight Panel
+
+Displays live pseudo-code and highlights the current step in the planner’s reasoning:
+
+if goal in current_state:
+    pop()
+elif goal == ON(X,Y):
+    push(HOLDING(X))
+    push(CLEAR(Y))
+    push(STACK(X,Y))
+
+
+The highlighted line changes as the planner processes each goal or applies an operator.
+
+🎮 6. Controls
+Control	Description
+▶️ Start	Run the planner simulation
+⏸️ Pause	Pause the visualization
+⏩ Step	Execute one goal/action manually
+🔁 Reset	Reset to initial state
+🧱 Change Scenario	Redefine initial and goal state
+⚙️ Speed	Adjust visualization speed (slow/medium/fast)
+4️⃣ Algorithm Implementation (as in your code)
+Core Data Structures
+
+vector<Predicate> world; → current world state
+
+stack<Predicate> goalStack; → goals and subgoals
+
+vector<Operation> plan; → sequence of actions
+
+Operators
+Operation	Preconditions	Add Effects	Delete Effects
+STACK(X, Y)	HOLDING(X), CLEAR(Y)	ON(X, Y), ARMEMPTY, CLEAR(X)	HOLDING(X), CLEAR(Y)
+UNSTACK(X, Y)	ON(X, Y), CLEAR(X), ARMEMPTY	HOLDING(X), CLEAR(Y)	ON(X, Y), ARMEMPTY
+PICKUP(X)	ONTABLE(X), CLEAR(X), ARMEMPTY	HOLDING(X)	ONTABLE(X), ARMEMPTY
+PUTDOWN(X)	HOLDING(X)	ONTABLE(X), CLEAR(X), ARMEMPTY	HOLDING(X)
+Algorithm Flow
+
+Initialize stack with all goal predicates.
+
+While stack not empty:
+
+Pop top goal.
+
+If already in world → skip.
+
+Else, choose operator to achieve it.
+
+Push operator’s preconditions.
+
+When preconditions satisfied, apply operator.
+
+Update world and plan sequence.
+
+Each operator application updates the visual blocks and panels.
+
+5️⃣ UI Layout (React Design)
+Section	Description
+Left Panel	3D/2D canvas showing the blocks and table
+Right Panel	Split vertically into: Goal Stack, Actions, World State
+Bottom Bar	Run, Pause, Reset, Speed controls
+Top Header	Title + Step count display
+
+Example Layout:
+
+-----------------------------------------------------
+|   [Canvas: Blocks World Visual]   |   [Goal Stack] |
+|                                   |   [Action Log] |
+|                                   |   [World State]|
+-----------------------------------------------------
+|   [Run] [Pause] [Step] [Reset] [Speed]            |
+-----------------------------------------------------
+
+6️⃣ Tech Stack
+Component	Technology
+Frontend	React.js
+Animation	Framer Motion / React Spring
+Visualization	SVG or React Konva Canvas
+Styling	TailwindCSS
+Backend (optional)	None (pure client-side)
+Hosting	Netlify
+7️⃣ Example Execution Trace
+
+Initial:
+ON(B, A), ONTABLE(A), CLEAR(B), ARMEMPTY
+
+Goal:
+ON(C, A)
+
+Steps:
+
+1. Push goal: ON(C, A)
+2. Pop ON(C, A)
+3. Push subgoals: HOLDING(C), CLEAR(A)
+4. Pop CLEAR(A) → already true
+5. Pop HOLDING(C)
+6. Apply PICKUP(C)
+7. Apply STACK(C, A)
+
+
+Result:
+✅ Goal achieved — ON(C, A) now true in world.
+Plan:
+
+PICKUP(C)
+STACK(C, A)
+
+8️⃣ Educational Value
+
+This project allows learners to see the reasoning process of AI planning:
+
+How the stack grows and shrinks
+
+How operators are selected
+
+How world state updates with each action
+
+It bridges symbolic reasoning and real-world visualization — ideal for AI lab teaching.
+
+9️⃣ Possible Enhancements
+
+Add voice narration explaining each planner step.
+
+Enable step-by-step playback for teaching.
+
+Allow saving scenarios as JSON.
+
+Add comparison mode with STRIPS planning or forward search.
+
+10️⃣ Hosting & Usage
+
+Deploy on Netlify.
+
+Start page with scenario selection:
+
+Default: (B on A) → (C on A, B on D)
+
+Custom: User defines initial and goal states interactively.
+
+Each simulation run generates:
+
+Step-by-step log
+
+Final plan sequence
+
+World state summary
+
+🌟 Summary
+Aspect	Description
+Algorithm	Goal Stack Planning
+Problem Domain	Blocks World
+Visualization	Live Stack, World State, and Operator Animation
+Goal	Educational Understanding of AI Planning
+Hosting	Netlify
+Core Features	Interactive blocks, dynamic stack, action animation

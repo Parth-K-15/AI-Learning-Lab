@@ -261,14 +261,16 @@ int main() {
 }
 `;
 
-export default function CodeViewer({ isOpen, onClose, pyCode, cppCode: cppCodeProp, baseName }) {
+export default function CodeViewer({ isOpen, onClose, pyCode, cppCode: cppCodeProp, javaCode, baseName }) {
   const [selectedLanguage, setSelectedLanguage] = useState('python');
   const [copySuccess, setCopySuccess] = useState('');
 
   if (!isOpen) return null;
 
-  const currentCode = selectedLanguage === 'python' ? (pyCode || defaultPythonCode) : (cppCodeProp || defaultCppCode);
-  const fileExtension = selectedLanguage === 'python' ? 'py' : 'cpp';
+  const currentCode = selectedLanguage === 'python' ? (pyCode || defaultPythonCode) : 
+                     selectedLanguage === 'java' ? javaCode :
+                     (cppCodeProp || defaultCppCode);
+  const fileExtension = selectedLanguage === 'python' ? 'py' : selectedLanguage === 'java' ? 'java' : 'cpp';
   const fileName = `${baseName || (selectedLanguage === 'python' ? 'missionaries_cannibals' : '3m3c_astar')}.${fileExtension}`;
 
   const handleCopy = async () => {
@@ -334,6 +336,18 @@ export default function CodeViewer({ isOpen, onClose, pyCode, cppCode: cppCodePr
             >
               ⚙️ C++
             </button>
+            {javaCode && (
+              <button
+                onClick={() => setSelectedLanguage('java')}
+                className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                  selectedLanguage === 'java'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                }`}
+              >
+                ☕ Java
+              </button>
+            )}
           </div>
         </div>
 
