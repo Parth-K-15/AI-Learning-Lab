@@ -1,0 +1,383 @@
+Project Title
+
+A* Search Algorithm Visualizer for Graphs
+
+1️⃣ Overview
+🔍 Summary
+
+Build a web-based interactive visualizer that demonstrates how the A* search algorithm works on a graph (or grid).
+
+The user can:
+
+Create or load a graph
+
+Select a start and goal node
+
+Choose a heuristic function
+
+Watch A* explore the graph step-by-step:
+
+which nodes go into open list
+
+which nodes go into closed list
+
+how g, h, f values are calculated
+
+See the final shortest path highlighted.
+
+🎯 Purpose
+
+This tool is meant to teach A* on a general graph, not just specific puzzles (8-puzzle, missionaries, etc.).
+It helps juniors understand:
+
+How A* combines cost (g) + heuristic (h)
+
+How nodes are picked from the open list
+
+Why A* is optimal (with admissible heuristics)
+
+Perfect for:
+
+AI Lab demo
+
+Viva explanations
+
+Online learning tool (hosted on Netlify)
+
+2️⃣ Objectives
+
+Implement A* on a weighted graph (non-negative edge weights).
+
+Let users visually build or edit a graph.
+
+Visualize the search process (open list, closed list, current node).
+
+Support at least one admissible heuristic:
+
+Euclidean distance / straight-line distance (for coordinate-based nodes)
+
+Show final shortest path clearly.
+
+3️⃣ Core Features
+🧱 1. Graph Creation & Editing
+
+User can:
+
+Click to add nodes on a canvas.
+
+Drag to connect nodes with edges.
+
+Assign edge weights (default = 1, editable).
+
+Move nodes around by dragging.
+
+Alternate mode (optional):
+
+Preloaded sample graphs:
+
+Simple grid
+
+Maze-like graph
+
+Random weighted graph
+
+🧭 2. Start & Goal Selection
+
+User clicks on any node to mark:
+
+Start node (e.g., green)
+
+Goal node (e.g., red)
+
+The app validates that both are selected before running A*.
+
+🧮 3. A* Algorithm Execution & Visualization
+
+On clicking “Run A*”:
+
+Step-by-step animation:
+
+Current node being expanded is highlighted (e.g., blue).
+
+Newly generated neighbors added to Open List.
+
+Finished nodes move to Closed List.
+
+For each node:
+
+Show g, h, and f = g + h values.
+
+Optionally visible as labels near the node or in a table.
+
+Algorithm options:
+
+▶️ Play (auto mode)
+
+⏸️ Pause
+
+⏭️ Next Step (manual step)
+
+📊 4. Open / Closed List Visualization
+
+A panel shows:
+
+Open List (Min-heap by f value)
+
+Node | g | h | f
+A    | 0 | 10 | 10
+B    | 2 | 7  | 9
+C    | 4 | 4  | 8  ← current best
+
+
+Closed List
+
+Node | g | h | f
+S    | 0 | 9 | 9
+X    | 3 | 6 | 9
+
+
+The node chosen at each step is highlighted.
+
+🧠 5. Heuristic Options
+
+For each node, store (x, y) coordinates.
+
+Heuristic choices:
+
+h1: Euclidean distance:
+
+ℎ
+(
+𝑛
+)
+=
+(
+𝑥
+𝑛
+−
+𝑥
+𝑔
+𝑜
+𝑎
+𝑙
+)
+2
++
+(
+𝑦
+𝑛
+−
+𝑦
+𝑔
+𝑜
+𝑎
+𝑙
+)
+2
+h(n)=
+(x
+n
+	​
+
+−x
+goal
+	​
+
+)
+2
++(y
+n
+	​
+
+−y
+goal
+	​
+
+)
+2
+	​
+
+
+(Optional) h2: Manhattan distance:
+
+ℎ
+(
+𝑛
+)
+=
+∣
+𝑥
+𝑛
+−
+𝑥
+𝑔
+𝑜
+𝑎
+𝑙
+∣
++
+∣
+𝑦
+𝑛
+−
+𝑦
+𝑔
+𝑜
+𝑎
+𝑙
+∣
+h(n)=∣x
+n
+	​
+
+−x
+goal
+	​
+
+∣+∣y
+n
+	​
+
+−y
+goal
+	​
+
+∣
+
+User can select heuristic from a dropdown:
+
+“Straight-line (Euclidean) – admissible”
+
+“Manhattan (for grid-like graphs)”
+
+🛤️ 6. Final Path Highlight
+
+Once the goal is reached:
+
+Backtrack using parent pointers.
+
+Highlight path edges in a distinct color (e.g., bright yellow).
+
+Display:
+
+✅ “Path found”
+
+Path length (total cost g(goal))
+
+Nodes on path: S → A → C → G
+
+🎛️ 7. Control Panel
+
+Controls:
+
+🧩 Graph Mode
+
+Add node
+
+Add edge
+
+Delete node/edge
+
+🎯 Search Mode
+
+Select Start / Goal
+
+Select heuristic
+
+Run / Pause / Step / Reset
+
+4️⃣ Algorithm Details
+Graph Model
+
+Nodes: id, x, y
+
+Edges: from, to, weight
+
+Represent as adjacency list:
+
+graph = {
+  "A": [{to: "B", w: 2}, {to: "C", w: 5}],
+  "B": [{to: "C", w: 1}, ...],
+};
+
+A* Algorithm Pseudocode
+function A*(start, goal):
+    openSet = priority queue ordered by f
+    openSet.push(start)
+    g[start] = 0
+    h[start] = heuristic(start, goal)
+    f[start] = g[start] + h[start]
+    parent[start] = None
+
+    while openSet not empty:
+        current = node in openSet with lowest f
+
+        if current == goal:
+            return reconstruct_path(parent, goal)
+
+        move current from openSet to closedSet
+
+        for each neighbor of current:
+            tentative_g = g[current] + weight(current, neighbor)
+
+            if neighbor in closedSet and tentative_g >= g[neighbor]:
+                continue
+
+            if neighbor not in openSet or tentative_g < g[neighbor]:
+                parent[neighbor] = current
+                g[neighbor] = tentative_g
+                h[neighbor] = heuristic(neighbor, goal)
+                f[neighbor] = g[neighbor] + h[neighbor]
+                if neighbor not in openSet:
+                    openSet.push(neighbor)
+
+5️⃣ UI Layout
+
+Top Bar:
+
+Title: “A* Graph Visualizer”
+
+Heuristic selector
+
+Run / Step / Reset buttons
+
+Main area split:
+
+Left: Graph Canvas	Right: Info Panel
+Nodes & edges drawn visually	Open List (table)
+Start / Goal colored	Closed List (table)
+Animation of current node & path	Current node details (g, h, f)
+	Short explanation of A* step
+
+7️⃣ Educational Extras (Optional but Cool)
+
+“Explain Step” button that shows:
+
+“Chosen node C because f(C) = 8 is the lowest among open nodes.”
+
+Show all visited nodes count:
+
+Nodes expanded: N
+
+Compare with Dijkstra (turn off heuristic, i.e., h = 0).
+
+Dark mode for better presentations.
+
+8️⃣ Success Criteria
+
+✅ A* correctly finds shortest path on different graphs.
+✅ Visualization clearly shows:
+
+Open/Closed sets
+
+Node selection order
+
+Path reconstruction
+
+✅ Usable for:
+
+AI Lab demo
+
+Explaining A* in viva
+
+Sharing link with juniors (Netlify hosted)

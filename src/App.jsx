@@ -5,6 +5,7 @@ import MissionariesCannibals from './pages/MissionariesCannibals';
 import NQueens from './pages/NQueens';
 import GoalStackPlanning from './pages/GoalStackPlanning';
 import EightPuzzle from './pages/EightPuzzle';
+import AStarVisualizer from './pages/AStarVisualizer';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/n-queens" element={<NQueens />} />
         <Route path="/goal-stack-planning" element={<GoalStackPlanning />} />
         <Route path="/8-puzzle" element={<EightPuzzle />} />
+        <Route path="/astar-visualizer" element={<AStarVisualizer />} />
       </Routes>
     </Router>
   );
