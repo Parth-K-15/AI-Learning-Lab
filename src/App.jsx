@@ -12,11 +12,11 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/astar-visualizer" element={<AStarVisualizer />} />
         <Route path="/missionaries-cannibals" element={<MissionariesCannibals />} />
         <Route path="/n-queens" element={<NQueens />} />
         <Route path="/goal-stack-planning" element={<GoalStackPlanning />} />
         <Route path="/8-puzzle" element={<EightPuzzle />} />
-        <Route path="/astar-visualizer" element={<AStarVisualizer />} />
       </Routes>
     </Router>
   );

@@ -4,6 +4,16 @@ import { motion } from 'framer-motion';
 
 export default function Home() {
   const games = [
+    
+    {
+      id: 'astar',
+      title: 'A* Graph Visualizer',
+      description: 'Create custom graphs and watch A* pathfinding in action. Experiment with Euclidean and Manhattan heuristics on interactive node networks.',
+      icon: '🗺️',
+      color: 'from-green-600 to-teal-600',
+      path: '/astar-visualizer',
+      features: ['Graph Editing', 'Custom Heuristics', 'Path Visualization', 'Real-time Search']
+    },
     {
       id: 'm3c',
       title: '3 Missionaries & 3 Cannibals',
@@ -39,15 +49,6 @@ export default function Home() {
       color: 'from-cyan-600 to-blue-600',
       path: '/8-puzzle',
       features: ['A* Algorithm', 'Manhattan Distance', 'Open/Closed Lists', 'Heuristic Comparison']
-    },
-    {
-      id: 'astar',
-      title: 'A* Graph Visualizer',
-      description: 'Create custom graphs and watch A* pathfinding in action. Experiment with Euclidean and Manhattan heuristics on interactive node networks.',
-      icon: '🗺️',
-      color: 'from-green-600 to-teal-600',
-      path: '/astar-visualizer',
-      features: ['Graph Editing', 'Custom Heuristics', 'Path Visualization', 'Real-time Search']
     }
   ];
 
