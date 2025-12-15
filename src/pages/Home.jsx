@@ -194,9 +194,20 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-16 bg-slate-900/50">
-        <div className="max-w-7xl mx-auto px-6 py-8 text-center text-gray-400">
-          <p>Built with React, Tailwind CSS, and Framer Motion</p>
-          <p className="mt-2">AI Learning Lab © 2025</p>
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center md:text-left text-gray-400">
+            <div>
+              <h4 className="font-semibold text-cyan-400 mb-2">AI Learning Lab</h4>
+              <p className="text-sm">Interactive visualizations for AI algorithms</p>
+              <p className="text-sm mt-1">Built with React, Tailwind CSS, and Framer Motion</p>
+            </div>
+            <div className="md:text-right">
+              <h4 className="font-semibold text-cyan-400 mb-2">Created By</h4>
+              <p className="text-sm font-medium text-white">Parth Kathane</p>
+              <p className="text-sm">PCCOE - CSE (AI & ML)</p>
+              <p className="text-xs mt-2">© 2025 All rights reserved</p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
