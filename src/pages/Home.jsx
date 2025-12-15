@@ -14,6 +14,16 @@ export default function Home() {
       path: '/astar-visualizer',
       features: ['Graph Editing', 'Custom Heuristics', 'Path Visualization', 'Real-time Search']
     },
+    
+    {
+      id: 'alphabeta',
+      title: 'Alpha-Beta Pruning',
+      description: 'Learn game tree optimization with Alpha-Beta pruning. Watch how α and β values propagate to prune unnecessary branches and improve minimax efficiency.',
+      icon: '🌳',
+      color: 'from-amber-600 to-yellow-600',
+      path: '/alpha-beta-pruning',
+      features: ['Minimax Algorithm', 'Alpha-Beta Cutoffs', 'Tree Visualization', 'Pruning Analysis']
+    },
     {
       id: 'm3c',
       title: '3 Missionaries & 3 Cannibals',
@@ -22,15 +32,6 @@ export default function Home() {
       color: 'from-blue-600 to-cyan-600',
       path: '/missionaries-cannibals',
       features: ['A* Algorithm', 'Heuristic Search', 'Dual Play Modes', 'Real-time Visualization']
-    },
-    {
-      id: 'gsp',
-      title: 'Goal Stack Planning',
-      description: 'Explore AI planning with the Blocks World problem. Watch how the Goal Stack Planner decomposes goals and generates action sequences.',
-      icon: '🧱',
-      color: 'from-purple-600 to-pink-600',
-      path: '/goal-stack-planning',
-      features: ['Stack-based Planning', 'Operator Selection', 'World State Updates', 'Step-by-step Execution']
     },
     {
       id: 'nqueens',
@@ -49,7 +50,16 @@ export default function Home() {
       color: 'from-cyan-600 to-blue-600',
       path: '/8-puzzle',
       features: ['A* Algorithm', 'Manhattan Distance', 'Open/Closed Lists', 'Heuristic Comparison']
-    }
+    },
+    {
+      id: 'gsp',
+      title: 'Goal Stack Planning',
+      description: 'Explore AI planning with the Blocks World problem. Watch how the Goal Stack Planner decomposes goals and generates action sequences.',
+      icon: '🧱',
+      color: 'from-purple-600 to-pink-600',
+      path: '/goal-stack-planning',
+      features: ['Stack-based Planning', 'Operator Selection', 'World State Updates', 'Step-by-step Execution']
+    },
   ];
 
   return (

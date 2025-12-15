@@ -1,0 +1,236 @@
+Project Title
+
+Alpha–Beta Pruning Visualizer (Game Tree Example Demonstration)
+
+1️⃣ Overview
+🔍 Project Summary
+
+This project is an interactive visual demonstration of the Alpha–Beta Pruning algorithm, applied to a fixed game tree example (as shown in the given diagram).
+
+The system visually explains:
+
+How Minimax works
+
+How α (alpha) and β (beta) values propagate
+
+Where and why pruning occurs
+
+How Alpha–Beta reduces unnecessary node evaluations
+
+This project is intended for:
+
+AI Lab experiments
+
+Classroom teaching
+
+Viva / practical explanations
+
+2️⃣ Problem Definition
+Game Tree Characteristics
+
+Root node: MAX
+
+Alternating levels:
+
+MAX → MIN → MAX → MIN → TERMINAL
+
+
+Branching factor: 2
+
+Leaf node values (left → right):
+
+3, 4, 2, 1, 7, 8, 9, 10, 2, 11, 1, 12, 14, 9, 13, 16
+
+Objective
+
+Apply Alpha–Beta Pruning to determine:
+
+Optimal value at the root (MAX)
+
+Nodes that are pruned
+
+Reduction in node evaluations
+
+3️⃣ Learning Objectives
+
+Understand Minimax with Alpha–Beta Pruning
+
+Visualize:
+
+Alpha (α) updates at MAX nodes
+
+Beta (β) updates at MIN nodes
+
+Identify cutoff conditions
+
+Justify pruning decisions logically
+
+Demonstrate efficiency improvement over plain Minimax
+
+4️⃣ Core Features
+🧩 1. Static Game Tree Visualization
+
+Display the predefined tree structure
+
+Nodes labeled as:
+
+MAX / MIN
+
+α and β values
+
+Terminal nodes display their numeric utility values
+
+🧮 2. Alpha–Beta Simulation Engine
+
+Traverses the tree left to right
+
+Maintains:
+
+alpha (initially −∞)
+
+beta (initially +∞)
+
+Updates values at each node according to rules
+
+🎯 3. Step-by-Step Execution Mode
+
+Each step highlights:
+
+Current node being evaluated
+
+Current (α, β) values
+
+Comparison condition:
+
+if β ≤ α → PRUNE
+
+🚫 4. Pruning Visualization
+
+Pruned subtrees are:
+
+Greyed out / crossed
+
+Marked “PRUNED”
+
+Nodes not evaluated are clearly shown
+
+Tooltip / text:
+
+Pruned because β ≤ α
+
+📊 5. Evaluation Log Panel
+
+A side panel displays reasoning in text form:
+
+Evaluating MIN node
+Received value = 2
+β updated to 2
+β ≤ α (2 ≤ 9) → Pruning remaining children
+
+🧠 6. Final Result Summary
+
+Displays:
+
+Optimal value at root:
+
+Optimal value (MAX) = 9
+
+
+Total nodes:
+
+Total leaf nodes = 16
+Evaluated nodes = 14
+Pruned nodes = 2
+
+
+List of pruned leaf values:
+
+11, 12
+
+5️⃣ Algorithm Rules (Displayed in App)
+MAX Node
+value = -∞
+for each child:
+    value = max(value, child_value)
+    alpha = max(alpha, value)
+    if alpha ≥ beta:
+        prune remaining children
+
+MIN Node
+value = +∞
+for each child:
+    value = min(value, child_value)
+    beta = min(beta, value)
+    if beta ≤ alpha:
+        prune remaining children
+
+6️⃣ Functional Flow
+
+Initialize:
+
+α = -∞, β = +∞
+
+
+Start at root (MAX)
+
+Traverse left subtree fully
+
+Update α at MAX nodes
+
+Update β at MIN nodes
+
+When:
+
+β ≤ α
+
+
+→ prune subtree
+
+Continue until root value determined
+
+7️⃣ UI Layout (Conceptual)
+------------------------------------------------
+|        Alpha–Beta Pruning Visualizer          |
+------------------------------------------------
+| Tree View (Main Area)                         |
+| - MAX/MIN nodes                               |
+| - α, β values                                 |
+| - Pruned branches marked                     |
+------------------------------------------------
+| Control Panel | Explanation Panel             |
+| Start | Step | Reset |                        |
+| Logs explaining α–β decisions                |
+------------------------------------------------
+| Final Result Summary                          |
+------------------------------------------------
+
+8️⃣ Technical Requirements
+Component	Requirement
+Algorithm	Alpha–Beta Pruning
+Tree Type	Fixed predefined tree
+Execution	Deterministic left-to-right
+Visualization	Node highlighting & pruning
+Hosting	Optional (Netlify / Local)
+9️⃣ Non-Functional Requirements
+
+Clear distinction between MAX and MIN nodes
+
+Easy-to-follow traversal
+
+Suitable for manual step explanation
+
+Minimal latency between steps
+
+Readable on projector / screen
+
+🔟 Evaluation Criteria (For Lab / Viva)
+
+✔ Correct α and β propagation
+✔ Correct pruning justification
+✔ Correct final MAX value
+✔ Clear explanation of pruning
+✔ Reduced node evaluation shown
+
+11️⃣ Expected Output (For Given Example)
+Optimal value at root (MAX) = 9
+Pruned nodes = {11, 12}
